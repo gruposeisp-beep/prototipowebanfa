@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Partidos en Vivo</title>
+    <style>
+        :root {
+            --primary-color: #00C853;
+            --error-color: #B00020;
+            --edit-color: #FFA000;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .back-button {
+            align-self: flex-start;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: var(--primary-color);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        h1, h2 { text-align: center; margin-top: 0; }
+
+        .container { max-width: 800px; width: 100%; display: grid; gap: 20px; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .row { display: flex; gap: 10px; }
+        .col { flex: 1; }
+        
+        button {
+            width: 100%; padding: 12px; background-color: var(--primary-color); color: white;
+            border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold;
+        }
+        button:hover { background-color: #009624; }
+
+        .action-buttons { display: flex; gap: 5px; }
+        .btn-delete { background-color: var(--error-color); padding: 5px 10px; font-size: 14px; width: auto; }
+        .btn-delete:hover { background-color: #790000; }
+        .btn-edit { background-color: var(--edit-color); padding: 5px 10px; font-size: 14px; width: auto; }
+        .btn-edit:hover { background-color: #FF6F00; }
+
+        #liveMatchesList { padding: 0; }
+        .match-item {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .match-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .team-name { font-weight: 500; flex: 1; text-align: center; }
+        .score-display { 
+            font-weight: bold; font-size: 1.4em; background: #f0f0f0; 
+            padding: 5px 15px; border-radius: 15px; min-width: 60px; text-align: center;
+        }
+        .match-time { font-size: 0.9em; color: #777; margin-top: 5px; text-align: center;}
+        .vs-container { display: flex; flex-direction: column; align-items: center; }
+
+        #editModeIndicator {
+            display: none;
+            background-color: #FFF3E0;
+            color: #E65100;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #FFB74D;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="back-button">← Volver al Inicio</a>
+
+    <h1>Gestión Partidos en Vivo</h1>
+    
+    <div class="container">
+        
+        <div class="card">
+            <h2 id="formTitle">Nuevo Partido en Vivo</h2>
+            <div id="editModeIndicator">⚠️ Editando partido existente</div>
+            
+            <input type="hidden" id="currentMatchId"> <div class="row form-group">
+                <div class="col">
+                    <label>Equipo 1</label>
+                    <input type="text" id="team1" placeholder="Nombre Equipo 1">
+                </div>
+                <div class="col">
+                    <label>Marcador 1</label>
+                    <input type="number" id="score1" placeholder="0">
+                </div>
+            </div>
+
+            <div class="row form-group">
+                <div class="col">
+                    <label>Equipo 2</label>
+                    <input type="text" id="team2" placeholder="Nombre Equipo 2">
+                </div>
+                <div class="col">
+                    <label>Marcador 2</label>
+                    <input type="number" id="score2" placeholder="0">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Tiempo / Estado</label>
+                <input type="text" id="matchTime" placeholder="Ej: 15:00, 2T 35', Finalizado">
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <button onclick="saveMatch()" id="btnSave">Publicar Partido</button>
+                </div>
+                <div class="col" style="display:none;" id="cancelEditContainer">
+                    <button onclick="cancelEdit()" style="background-color:#777;">Cancelar Edición</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Partidos en Curso</h2>
+            <div id="matchesContainer">
+                <p style="text-align:center; color:#777;">Cargando partidos...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+        // CONFIGURACIÓN
+        const firebaseConfig = {
+            apiKey: "AIzaSyAiB_9V732W-5ZsPOebs-geKsDcjjzoFVM",
+            authDomain: "anfaapp-6b987.firebaseapp.com",
+            databaseURL: "https://anfaapp-6b987-default-rtdb.firebaseio.com",
+            projectId: "anfaapp-6b987",
+            storageBucket: "anfaapp-6b987.firebasestorage.app",
+            messagingSenderId: "372675720641",
+            appId: "1:372675720641:web:fcdbafd7dd62b59091eb40" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        const matchesRef = ref(database, 'liveMatches');
+        
+        // 1. LEER Y MOSTRAR PARTIDOS
+        onValue(matchesRef, (snapshot) => {
+            const container = document.getElementById('matchesContainer');
+            let html = '';
+
+            if (snapshot.exists()) {
+                snapshot.forEach((child) => {
+                    const match = child.val();
+                    const id = child.key;
+                    
+                    const matchDataStr = JSON.stringify({id, ...match}).replace(/"/g, '&quot;');
+
+                    html += `
+                        <div class="match-item">
+                            <div class="match-info">
+                                <div class="team-name" style="text-align:right;">${match.team1}</div>
+                                <div class="vs-container">
+                                    <div class="score-display">${match.score1} - ${match.score2}</div>
+                                    <div class="match-time">${match.matchTime}</div>
+                                </div>
+                                <div class="team-name" style="text-align:left;">${match.team2}</div>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn-edit" onclick="startEdit('${matchDataStr}')">✏️</button>
+                                <button class="btn-delete" onclick="deleteMatch('${id}')">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p style="text-align:center; color:#777;">No hay partidos en vivo actualmente.</p>';
+            }
+        });
+
+        // 2. GUARDAR (CREAR O ACTUALIZAR)
+        window.saveMatch = () => {
+            const id = document.getElementById('currentMatchId').value;
+            const team1 = document.getElementById('team1').value.trim();
+            const score1 = document.getElementById('score1').value;
+            const team2 = document.getElementById('team2').value.trim();
+            const score2 = document.getElementById('score2').value;
+            const time = document.getElementById('matchTime').value.trim();
+
+            if (!team1 || !team2 || !time) {
+                alert("Faltan datos obligatorios (Equipos y Tiempo)");
+                return;
+            }
+
+            const matchData = {
+                team1, 
+                score1: parseInt(score1) || 0, 
+                team2, 
+                score2: parseInt(score2) || 0, 
+                matchTime: time
+            };
+
+            if (id) {
+                // MODO EDICIÓN: Actualizar existente
+                matchData.id = id; 
+                update(ref(database, `liveMatches/${id}`), matchData)
+                    .then(() => {
+                        alert("Marcador actualizado");
+                        cancelEdit(); 
+                    })
+                    .catch(err => alert("Error al actualizar: " + err.message));
+            } else {
+                // MODO CREACIÓN: Nuevo partido
+                const newRef = push(matchesRef);
+                matchData.id = newRef.key;
+                set(newRef, matchData)
+                    .then(() => {
+                        alert("Partido publicado");
+                        cancelEdit(); 
+                    })
+                    .catch(err => alert("Error al crear: " + err.message));
+            }
+        };
+
+        // 3. ELIMINAR
+        window.deleteMatch = (id) => {
+            if(confirm("¿Eliminar este partido en vivo?")) {
+                remove(ref(database, `liveMatches/${id}`))
+                    .catch(err => alert("Error: " + err.message));
+            }
+        };
+
+        window.startEdit = (matchJson) => {
+            const match = JSON.parse(matchJson);
+            
+            // Llenar campos
+            document.getElementById('currentMatchId').value = match.id;
+            document.getElementById('team1').value = match.team1;
+            document.getElementById('score1').value = match.score1;
+            document.getElementById('team2').value = match.team2;
+            document.getElementById('score2').value = match.score2;
+            document.getElementById('matchTime').value = match.matchTime;
+
+            document.getElementById('formTitle').innerText = "Editar Marcador";
+            document.getElementById('btnSave').innerText = "Actualizar Partido";
+            document.getElementById('btnSave').style.backgroundColor = "#FFA000"; 
+            document.getElementById('editModeIndicator').style.display = "block";
+            document.getElementById('cancelEditContainer').style.display = "block";
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.cancelEdit = () => {
+            // Limpiar campos
+            document.getElementById('currentMatchId').value = '';
+            document.getElementById('team1').value = '';
+            document.getElementById('score1').value = '';
+            document.getElementById('team2').value = '';
+            document.getElementById('score2').value = '';
+            document.getElementById('matchTime').value = '';
+
+            document.getElementById('formTitle').innerText = "Nuevo Partido en Vivo";
+            document.getElementById('btnSave').innerText = "Publicar Partido";
+            document.getElementById('btnSave').style.backgroundColor = "#00C853";
+            document.getElementById('editModeIndicator').style.display = "none";
+            document.getElementById('cancelEditContainer').style.display = "none";
+        };
+
+    </script>
+</body>
+</html>

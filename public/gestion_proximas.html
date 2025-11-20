@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Próximas Fechas</title>
+    <style>
+        :root {
+            --primary-color: #00C853;
+            --error-color: #B00020;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .back-button {
+            align-self: flex-start;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: var(--primary-color);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        h1, h2, h3 { text-align: center; margin-top: 0; }
+
+        .container { max-width: 800px; width: 100%; display: grid; gap: 20px; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .row { display: flex; gap: 10px; }
+        .col { flex: 1; }
+        
+        button {
+            width: 100%; padding: 12px; background-color: var(--primary-color); color: white;
+            border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold;
+        }
+        button:hover { background-color: #009624; }
+        
+        .btn-outline { background-color: transparent; border: 2px solid var(--primary-color); color: var(--primary-color); }
+        .btn-outline:hover { background-color: var(--primary-color); color: white; }
+        
+        .btn-delete { background-color: var(--error-color); width: auto; padding: 8px 16px; font-size: 14px; }
+        .btn-delete:hover { background-color: #790000; }
+
+        #tablesList { list-style: none; padding: 0; }
+        .table-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+
+        .league-section { margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        .league-title { color: var(--primary-color); font-size: 1.4em; margin-bottom: 15px; border-left: 4px solid var(--primary-color); padding-left: 10px; text-align: left;}
+        .match-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .team-name { font-size: 1em; font-weight: 500; flex: 1; }
+        .score-board { font-weight: bold; font-size: 1.2em; background: #f0f0f0; padding: 5px 15px; border-radius: 15px; margin: 0 10px; }
+        .match-time { color: #777; font-size: 0.9em; margin-top: 5px; text-align: center; }
+        .match-center { display: flex; flex-direction: column; align-items: center; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="back-button">← Volver al Inicio</a>
+
+    <h1>Gestión Próximas Fechas</h1>
+    
+    <div class="container">
+        
+        <div class="card">
+            <h2>Visualización</h2>
+            <p>Revisa las tablas de próximas fechas activas.</p>
+            <button class="btn-outline" onclick="toggleTablesView()">Ver Próximas Fechas</button>
+        </div>
+
+        <div id="tablesDisplaySection" class="card hidden">
+            <h2>Tablas Futuras</h2>
+            <div id="tablesContent">
+                <p style="text-align:center; color:#777;">Cargando datos...</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Crear Tabla Futura</h2>
+            <p>Crea una tabla para fechas futuras e inserta el primer partido.</p>
+            
+            <div class="form-group">
+                <label>Nombre de la Tabla</label>
+                <input type="text" id="newTableTitle" placeholder="Ej: Torneo de Verano - Fecha 1">
+            </div>
+
+            <hr>
+            <label>Primer Partido</label>
+            
+            <div class="row form-group">
+                <div class="col"><input type="text" id="newTeam1" placeholder="Equipo 1"></div>
+                <div class="col"><input type="number" id="newScore1" placeholder="Goles 1 (opcional)"></div>
+            </div>
+            <div class="row form-group">
+                <div class="col"><input type="text" id="newTeam2" placeholder="Equipo 2"></div>
+                <div class="col"><input type="number" id="newScore2" placeholder="Goles 2 (opcional)"></div>
+            </div>
+            <div class="form-group">
+                <input type="text" id="newMatchTime" placeholder="Hora (ej: 15:00)">
+            </div>
+
+            <button onclick="createNewTable()">Guardar Tabla Futura</button>
+        </div>
+
+        <div class="card">
+            <h2>Añadir Partido a Tabla Futura</h2>
+            
+            <div class="form-group">
+                <label>Seleccionar Tabla</label>
+                <select id="tableSelector">
+                    <option value="">Cargando tablas...</option>
+                </select>
+            </div>
+
+            <div class="row form-group">
+                <div class="col"><input type="text" id="addTeam1" placeholder="Equipo 1"></div>
+                <div class="col"><input type="number" id="addScore1" placeholder="Goles 1"></div>
+            </div>
+            <div class="row form-group">
+                <div class="col"><input type="text" id="addTeam2" placeholder="Equipo 2"></div>
+                <div class="col"><input type="number" id="addScore2" placeholder="Goles 2"></div>
+            </div>
+            <div class="form-group">
+                <input type="text" id="addMatchTime" placeholder="Hora (ej: 15:00)">
+            </div>
+
+            <button onclick="addMatchToTable()">Guardar Partido</button>
+        </div>
+
+        <div class="card">
+            <h2>Eliminar Tablas Futuras</h2>
+            <ul id="tablesList">
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAiB_9V732W-5ZsPOebs-geKsDcjjzoFVM",
+            authDomain: "anfaapp-6b987.firebaseapp.com",
+            databaseURL: "https://anfaapp-6b987-default-rtdb.firebaseio.com",
+            projectId: "anfaapp-6b987",
+            storageBucket: "anfaapp-6b987.firebasestorage.app",
+            messagingSenderId: "372675720641",
+            appId: "1:372675720641:web:fcdbafd7dd62b59091eb40" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        const tablesRef = ref(database, 'futureTables');
+        
+        onValue(tablesRef, (snapshot) => {
+            const tableSelect = document.getElementById('tableSelector');
+            const tablesListUl = document.getElementById('tablesList');
+            const tablesContentDiv = document.getElementById('tablesContent');
+            
+            tableSelect.innerHTML = '<option value="">Selecciona una tabla...</option>';
+            tablesListUl.innerHTML = '';
+            let htmlContent = '';
+
+            if (snapshot.exists()) {
+                snapshot.forEach((childSnapshot) => {
+                    const table = childSnapshot.val();
+                    const tableId = childSnapshot.key;
+
+                    // Selector
+                    const option = document.createElement('option');
+                    option.value = tableId;
+                    option.text = table.title;
+                    tableSelect.appendChild(option);
+
+                    // Lista eliminar
+                    const li = document.createElement('li');
+                    li.className = 'table-item';
+                    li.innerHTML = `<span>${table.title}</span><button class="btn-delete" data-id="${tableId}">Eliminar</button>`;
+                    tablesListUl.appendChild(li);
+
+                    // Visualización
+                    let matchesHtml = '';
+                    if (table.matches) {
+                        Object.values(table.matches).forEach(match => {
+                            matchesHtml += `
+                                <div class="match-card">
+                                    <div class="team-name" style="text-align:right;">${match.team1}</div>
+                                    <div class="match-center">
+                                        <div class="score-board">${match.score1 || 0} - ${match.score2 || 0}</div>
+                                        <div class="match-time">${match.matchTime}</div>
+                                    </div>
+                                    <div class="team-name" style="text-align:left;">${match.team2}</div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        matchesHtml = '<p style="text-align:center; color:#999;">No hay partidos.</p>';
+                    }
+
+                    htmlContent += `<div class="league-section"><h3 class="league-title">${table.title}</h3>${matchesHtml}</div>`;
+                });
+
+                document.querySelectorAll('.btn-delete').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        deleteTable(e.target.getAttribute('data-id'));
+                    });
+                });
+                tablesContentDiv.innerHTML = htmlContent;
+            } else {
+                tableSelect.innerHTML = '<option value="">No hay tablas</option>';
+                tablesListUl.innerHTML = '<p>No hay tablas futuras.</p>';
+                tablesContentDiv.innerHTML = '<p style="text-align:center;">No hay tablas futuras para mostrar.</p>';
+            }
+        });
+
+        window.toggleTablesView = () => {
+            const section = document.getElementById('tablesDisplaySection');
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                section.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                section.classList.add('hidden');
+            }
+        };
+
+        // CREAR TABLA FUTURA
+        window.createNewTable = () => {
+            const title = document.getElementById('newTableTitle').value.trim();
+            const team1 = document.getElementById('newTeam1').value.trim();
+            const score1 = document.getElementById('newScore1').value || 0;
+            const team2 = document.getElementById('newTeam2').value.trim();
+            const score2 = document.getElementById('newScore2').value || 0;
+            const time = document.getElementById('newMatchTime').value.trim();
+
+            if (!title || !team1 || !team2 || !time) {
+                alert("Completa título, equipos y hora.");
+                return;
+            }
+
+            const newTableRef = push(ref(database, 'futureTables'));
+            const tableId = newTableRef.key;
+            const newMatchRef = push(ref(database, `futureTables/${tableId}/matches`));
+            const matchId = newMatchRef.key;
+
+            const matchData = {
+                id: matchId, team1, score1: parseInt(score1), team2, score2: parseInt(score2), matchTime: time
+            };
+
+            set(newTableRef, {
+                id: tableId, title: title, matches: { [matchId]: matchData }
+            }).then(() => {
+                alert("Tabla futura creada");
+                // Limpiar
+                document.getElementById('newTableTitle').value = '';
+                document.getElementById('newTeam1').value = '';
+                document.getElementById('newScore1').value = '';
+                document.getElementById('newTeam2').value = '';
+                document.getElementById('newScore2').value = '';
+                document.getElementById('newMatchTime').value = '';
+            }).catch((error) => alert("Error: " + error.message));
+        };
+
+        // AÑADIR PARTIDO A TABLA FUTURA
+        window.addMatchToTable = () => {
+            const tableId = document.getElementById('tableSelector').value;
+            const team1 = document.getElementById('addTeam1').value.trim();
+            const score1 = document.getElementById('addScore1').value || 0;
+            const team2 = document.getElementById('addTeam2').value.trim();
+            const score2 = document.getElementById('addScore2').value || 0;
+            const time = document.getElementById('addMatchTime').value.trim();
+
+            if (!tableId) { alert("Selecciona una tabla."); return; }
+            if (!team1 || !team2 || !time) { alert("Faltan datos del partido."); return; }
+
+            const newMatchRef = push(ref(database, `futureTables/${tableId}/matches`));
+            set(newMatchRef, {
+                id: newMatchRef.key, team1, score1: parseInt(score1), team2, score2: parseInt(score2), matchTime: time
+            }).then(() => {
+                alert("Partido futuro añadido");
+                document.getElementById('addTeam1').value = '';
+                document.getElementById('addScore1').value = '';
+                document.getElementById('addTeam2').value = '';
+                document.getElementById('addScore2').value = '';
+                document.getElementById('addMatchTime').value = '';
+            }).catch((error) => alert("Error: " + error.message));
+        };
+
+        // ELIMINAR TABLA FUTURA
+        window.deleteTable = (tableId) => {
+            if(confirm("¿Eliminar esta tabla de próximas fechas?")) {
+                remove(ref(database, `futureTables/${tableId}`))
+                    .then(() => alert("Tabla eliminada"))
+                    .catch((error) => alert("Error: " + error.message));
+            }
+        };
+    </script>
+</body>
+</html>
